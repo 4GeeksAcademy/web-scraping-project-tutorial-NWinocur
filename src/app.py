@@ -57,7 +57,7 @@ def process_dataframe(unprocessed_df):
 
 def connect_to_sqlite() -> Connection:
     # Connect to the database or create it if it doesn't exist
-    con = sqlite3.connect(DATABASE_FILE
+    con = sqlite3.connect(DATABASE_FILE)
     con.execute("""DROP TABLE IF EXISTS MOSTSTREAMEDSONGS""")
     con.execute("""CREATE TABLE MOSTSTREAMEDSONGS (
     ID INT PRIMARY KEY     NOT NULL,
