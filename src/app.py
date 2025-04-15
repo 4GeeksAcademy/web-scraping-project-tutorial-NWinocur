@@ -26,11 +26,13 @@ def download_html(site_to_get: str) -> str:
 
 def transform_html(untransformed_html) -> pd.DataFrame:
     table = pd.read_html(untransformed_html)[0]  # only care about first table for now
-    print(f"{table}")
     return table
 
 
-def process_dataframe(unprocessed_df):
+def process_dataframe(unprocessed_df): 
+    # last column in table is Wikipedia's citation links, not useful to us, can drop it
+    unprocessed_df = unprocessed_df.drop(columns=["Ref."])
+
     # last row in table is a disclaimer about how recent the data is,
     # not relevant to what we're doing, so just drop that last row
     unprocessed_df = unprocessed_df.drop(unprocessed_df.index[-1])
@@ -52,6 +54,7 @@ def process_dataframe(unprocessed_df):
     df_clean = df_clean[
         ["ID", "SONG", "ARTIST", "STREAMS", "RELEASE_DATE"]
     ]  # Enforce order
+    print(f"{df_clean}")
     return df_clean
 
 
@@ -86,6 +89,7 @@ def visualize_data(db_path: str = DATABASE_FILE):
 
     # Convert release date to datetime where possible
     df['RELEASE_DATE'] = pd.to_datetime(df['RELEASE_DATE'], errors='coerce')
+    df['RELEASE_YEAR'] = df['RELEASE_DATE'].dt.year
 
     # Sort and take top 10 songs by streams
     top10 = df.sort_values('STREAMS', ascending=False).head(10)
@@ -98,22 +102,23 @@ def visualize_data(db_path: str = DATABASE_FILE):
     plt.tight_layout()
     plt.show()
 
-    # Plot 2: Streams over release date (line plot)
-    df_sorted = df.dropna(subset=['RELEASE_DATE']).sort_values('RELEASE_DATE')
-    plt.figure(figsize=(12, 6))
-    plt.plot(df_sorted['RELEASE_DATE'], df_sorted['STREAMS'], marker='o', linestyle='-')
-    plt.xlabel("Release Date")
-    plt.ylabel("Streams (Billions)")
-    plt.title("Streams vs. Release Date of Songs")
+    # Plot 2: Histogram of release years
+    plt.figure(figsize=(10, 5))
+    df_with_years = df.dropna(subset=['RELEASE_YEAR'])
+    plt.hist(df_with_years['RELEASE_YEAR'], bins=range(df_with_years['RELEASE_YEAR'].min(), df_with_years['RELEASE_YEAR'].max() + 1), align='left', edgecolor='black')
+    plt.xlabel("Release Year")
+    plt.ylabel("Number of Songs")
+    plt.title("Distribution of Top Streamed Songs by Release Year")
     plt.tight_layout()
     plt.show()
 
-    # Plot 3: Histogram of streaming numbers
-    plt.figure(figsize=(10, 5))
-    plt.hist(df['STREAMS'], bins=20, edgecolor='black')
-    plt.xlabel("Streams (Billions)")
-    plt.ylabel("Number of Songs")
-    plt.title("Distribution of Streams Across Songs")
+
+    # Plot 3: Top 10 artists by total streams
+    artist_streams = df.groupby('ARTIST')['STREAMS'].sum().sort_values(ascending=False).head(10)
+    plt.figure(figsize=(12, 6))
+    plt.barh(artist_streams.index[::-1], artist_streams.values[::-1])
+    plt.xlabel("Total Streams (Billions)")
+    plt.title("Top 10 Artists by Cumulative Streams")
     plt.tight_layout()
     plt.show()
 
